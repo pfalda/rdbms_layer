@@ -1,0 +1,168 @@
+<html>
+<head>
+    <title>Rdbms Layer - Activator Template</title>
+</head>
+<body>
+
+<div>
+    <h2> Introduction </h2>
+
+    <p>
+        <b>RdbmsLayer</b>, as the name implies, is a layer built on top of akka that handles queries towards a rdbms.
+        By default it uses <a href="http://dev.mysql.com/downloads/connector/j/">mysql connector</a> and it can behave in both asynchronous and synchronous ways.
+        The RdbmsLayer permits you to seamlessly integrate with akka, decomposing and parallelizing the interaction of your application with a RDBMS.
+        The <b>RdbmsLayer</b> can be easly integrated with different connection pool libraries and can easily integrate with other jdbc drivers.
+    </p>
+
+    <p>
+        Thanks to akka, the <b>RdbmsLayer</b> can serve high amount of requests concurrently and parse/elaborate the replies efficiently.
+        The whole application can so be designed to be reactive top to bottom.
+    </p>
+
+    <p>
+        In this demo code, a few requests are performed to an existing mysql database, first from a 'normal' program and then from within an akka program/actor.
+    </p>
+
+    <p>
+        All those handlers are reactive.
+    </p>
+
+    <p>
+        Lets start with the setup steps now.
+    </p>
+</div>
+
+<div>
+    <h2> Database Setup</h2>
+
+    <p>
+        In <a href="#code/src/main/resources/" class="shortcut">resources</a> you can find a <a href="#code/src/main/resources/TemplateDB.sql" class="shortcut">sql script</a>  that can be used to create a database schema suitable
+        for the test program. Once you have recreated such schema in your mysql instance, you can modifify
+        <a href="#code/src/main/resources/application.conf" class="shortcut">application.conf</a> filling it with hostname, database name, user and password
+        required to connect to your rdbms instance:<br>
+        <code>&nbsp;mysqldb {<br>
+            &nbsp;&nbsp;&nbsp;host = "taurus"<br>
+            &nbsp;&nbsp;&nbsp;port = 3306<br>
+            &nbsp;&nbsp;&nbsp;dbname = "TemplateDB"<br>
+            &nbsp;&nbsp;&nbsp;username = "root"<br>
+            &nbsp;&nbsp;&nbsp;pwd = "root"<br>
+            &nbsp;}<br>
+        </code>
+
+    </p>
+
+    <p>
+        Once you have completed these steps, you can successfully test this activator template
+    </p>
+
+    <p>
+        In the next section, we'll do an overview of the layer architecture, and at the end, we'll see a few usage cases.
+    </p>
+
+</div>
+
+<div>
+    <h2>Requests Architecture</h2>
+
+    <p>
+        <a href="#code/src/main/java/com/disbrain/dbmslayer/actors/GenericDBMSQueryingActor.java" class="shortcut">GenericDBMSQuerier</a> is an Actor which
+        deals with the sql requests. Its duties are the spawning of the underlying actor hierarchy, the logic for reusing it if required and
+        the reply generation once the data arrives from the database. If you want to interact with RdbmsLayer, you have to send a proper request to an actor of this kind.
+    </p>
+
+    <p>
+        <a href="#code/src/main/java/com/disbrain/dbmslayer/actors/DBMSWorker.java" class="shortcut">DBMSWorker</a> is an Actor which
+        deals with the database interaction. Its duties are the connection fetching and releasing, the execution of explicit
+        connection related DBMS commands (such as commit or rollback) and the choosing of the right dispatcher according to the
+        request characteristics. We'll see the last point more in detail later. From an usage point of view, you will never deal with this kind of actor.
+    </p>
+
+    <p>
+        When the <b>GenericDBMSQQueryingActor</b> is created, it spawns a <b>DBMSWorker</b>. While the connection is being fetched
+        from the connection pool, the <b>GenericDBMSQQueryingActor</b> parses the
+        <a href="#code/src/main/java/com/disbrain/dbmslayer/descriptors/QueryGenericArgument.java" class="shortcut">QueryGenerciArgument</a> object
+        used to represent the request and extracts the info regarding the request and the expected output.
+    </p>
+
+    <h3>Request Structure</h3>
+
+    <p>
+        A <b>QueryGenericArgument</b> object is used to instruct the layer not only about a request SQL and parameters, but also
+        regarding the <i>logical</i> behaviour of the request itself.
+        A typical QueryGenericArgument object has the following fields:
+        <pre>
+        &nbsp;Father => The reply message will be sent to the actor specified as a father
+        &nbsp;Query => The SQL query
+        &nbsp;Request Properties => Logical meaning of the request, we'll see below
+        &nbsp;Autocommit => Boolean that tells if a commit shall be performed after the execution of the request
+        &nbsp;Reply Type => Object type that will be sent to father as reply for the whole request
+        &nbsp;Argument Array => Object array that holds parameters for the SQL query
+        </pre>
+
+        A <a href="#code/src/main/java/com/disbrain/dbmslayer/descriptors/RequestModes.java" class="shortcut">Request Property</a>
+        is used to tell the system if the specified query will alter the content of the database (<i>WRITE</i>), will just read it (<i>READ_ONLY</i>)
+        or will perform both, as with a stored function (<i>READ_WRITE</i> ).<br>
+        The request <i>may</i> have also a behavioural profile, but the behavioural logic can be actually useful only if you are messing up with database locks,
+        so you can just ignore it and skip next section if you are not interested.
+
+        <h3>Behavioural Logic</h3>
+        If you are dealing with locks a query can sleep for a <i>long</i> time, acting as a stopper for your dispatcher.
+        So, if you can't address the problem using a complete async jdbc like driver, the <b>RdbmsLayer</b> provides you an <i>async</i> facilities system
+        to reduce the impact of those issues.
+        While creating a <i>RequestMode</i> object, you can specify one of these behavioural properties:
+        &nbsp;&nbsp;A <i>RESOURCE GETTER</i> is a for a query that very likely would block.<br>
+        &nbsp;&nbsp;A <i>RESOURCE_RELEASER</i> is for a query can never block and is for a query that is going to release a resource that has been already blocked.<br>
+        &nbsp;&nbsp;A <i>RESOURCE_WHATEVER</i> is for a query that should not block and should be executed as fast as possible because it's being executed with a block held.<br>
+        The queries with behavioural properties are run on a different set of dispatchers according to their property instead of the default ones, in order to limit the slowdown
+        of the whole RdbmsLayer.<br>
+        <img src="tutorial/LogicalAsyncFacilities.png">
+
+    </p>
+
+</div>
+
+<div>
+    <h2>System Architecture</h2>
+    <p>
+        The <i>general facilities</i> provide support for 'normal' rdbms interaction.
+        They are provided through tree kind of dispatchers: Connections Broker, CloseConnection Broker and DeadLettersBroker.
+        <div style="width:300px;margin:auto;overflow-x: hidden;">
+        <img src="tutorial/GeneralFacilities.png">
+        </div>
+        When a GenericDBMSQuerying actor and its hierarchy are spawned, a request is sent to a Connection Broker that's in charge
+        for fetching a connection from the connection pool. Once the DBMSWorker has the Connection, it's in charge for generating
+        the correct Statement for the submitted query and send it back to the GenericDBMS requester. Once the requester has the statement, it can build
+        the proper request and send it back to the DBMSWorker, that is in charge to route it to the right dispatcher according to the query properties.
+    </p>
+
+    <p>
+        Once the the query has been executed, its output is sent back to the GenericDBMSQueryingActor. There an object of the specified output class is reflectively constructed
+        using the infos contained in the class itself (number of columns and maximum number of lines) and the class constructor as a parser of the output. The final result is then sent back to the original requester
+        leaving the hierarchy intact and ready to be used for another request through the same GenericDBMSQueryingActor, if any. In this way we can build a flow of queries using the same
+        structure/connections, enabling us to build complex transaction friendly execution streams.
+    </p>
+</div>
+
+<div>
+    <h2>System Usage</h2>
+    <p>
+    You can use the RdbmsLayer from within your akka application as shown in the <a href="#code/src/main/java/com/disbrain/akkatemplate/SimpleTestWorker.java" class="shortcut">SimpleTestWorker</a> or use
+    is in a standalone application, using the generic <a href="#code/src/main/java/com/disbrain/dbmslayer/brokers/DBMSQueriesBroker" class="shortcut">broker</a> for performing queries without creating your own actor system,
+    as shown <a href="#code/src/main/java/com/disbrain/akkatemplate/Main.java" class="shortcut">here</a>.
+    Through the <a href="#code/src/main/java/com/disbrain/dbmslayer/DbmsQuery.java" class="shortcut">reuse apis</a> is possible to reuse hierarchies and turn them into async ones, according to your needs and your queries. It's possible to perform
+    serveral queries, force a <a href="#code/src/main/java/com/disbrain/dbmslayer/messages/DbmsWorkerCmdRequest.java" class="shortcut">commit/rollback</a>, restart using the same hierarchy/connection, everything is very flexible.
+    The RdbmsLayer
+    </p>
+</div>
+
+<div>
+    <h2>From Now On</h2>
+
+    <p>
+        Thanks for following this tutorial. It was just a quick glance at the reactive technologies build around akka and of the flexibility of the layer.
+        Dive deeper into the code or contact  <a href="mailto:disbrain@disbrain.com" class="shortcut">us</a> for more info and excitement.
+    </p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+message TestRequest
+{
+   required string   message = 1;
+}
+
+message TestReply
+{
+   required int32    return_code = 1;
+   optional string   return_msg = 2;
+   repeated uint64   out_data = 3;
+}
