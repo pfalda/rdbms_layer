@@ -9,8 +9,8 @@ package com.disbrain.akkatemplate.messages;
  */
 public class ReleaseReply {
     public final static int out_columns_num = 1;
-    public ReleaseReply(Object[] values)
-    {
+
+    public ReleaseReply(Object[] values) {
 
     }
 }

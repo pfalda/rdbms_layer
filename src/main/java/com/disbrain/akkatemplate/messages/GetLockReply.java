@@ -9,11 +9,12 @@ package com.disbrain.akkatemplate.messages;
  */
 public class GetLockReply {
     public final static int out_columns_num = 1;
-    public boolean got_lock = false;
+    public final boolean got_lock;
 
-    public GetLockReply(Object[] values)
-    {
-        if(values.length > 0)
-            got_lock = ((Long)values[0]) > 0;
+    public GetLockReply(Object[] values) {
+        if (values.length > 0)
+            got_lock = ((Long) values[0]) > 0;
+        else
+            got_lock = false;
     }
 }

@@ -1,13 +1,5 @@
 package com.disbrain.akkatemplate.actors;
 
-/**
- * Created with IntelliJ IDEA.
- * User: angel
- * Date: 02/01/14
- * Time: 15.11
- * To change this template use File | Settings | File Templates.
- */
-
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import com.disbrain.akkatemplate.descriptors.TagDescriptor;
@@ -20,33 +12,24 @@ import com.disbrain.dbmslayer.messages.DbmsWorkerCmdReply;
 import com.disbrain.dbmslayer.messages.DbmsWorkerCmdRequest;
 
 
-/**
- * Created with IntelliJ IDEA.
- * User: angel
- * Date: 02/01/14
- * Time: 11.34
- * To change this template use File | Settings | File Templates.
- */
 public class SimpleTestWorker extends UntypedActor {
 
     private Messages.TestRequest request;
     private Messages.TestReply.Builder response;
 
-    private ActorRef    final_dest,
-                        fetch_data,
-                        fetch_misc;
-    private int         all_done = 0;
+    private ActorRef final_dest,
+            fetch_data,
+            fetch_misc;
+    private int all_done = 0;
 
 
-    public SimpleTestWorker(ActorRef final_dest, Messages.TestRequest message)
-    {
+    public SimpleTestWorker(ActorRef final_dest, Messages.TestRequest message) {
         this.request = message;
         this.final_dest = final_dest;
     }
 
     @Override
-    public void preStart()
-    {
+    public void preStart() {
 
 
         fetch_data = DbmsQuery.create_generic_fsm(getContext(),
@@ -69,12 +52,10 @@ public class SimpleTestWorker extends UntypedActor {
     }
 
     @Override
-    public void onReceive(Object message)
-    {
-        if(message instanceof GetLockReply)
-        {
+    public void onReceive(Object message) {
+        if (message instanceof GetLockReply) {
             GetLockReply reply = (GetLockReply) message;
-            if(reply.got_lock == true)
+            if (reply.got_lock == true)
                 DbmsQuery.reuse_fsm(fetch_data, //we choose to use async dedicated dispatcher because we got the lock
                         new QueryGenericArgument(getSelf(), //here we could specify another actor for reply destination
                                 "DELETE FROM Obj_Info_EN WHERE Obj_Name = ? LIMIT 1;",
@@ -88,49 +69,44 @@ public class SimpleTestWorker extends UntypedActor {
 
         }
 
-        if(message instanceof GetTagsReply)
-        {
+        if (message instanceof GetTagsReply) {
             GetTagsReply reply = (GetTagsReply) message;
             getContext().stop(getSender());
-            if(reply.output != null)
-                for(TagDescriptor element : reply.output)
+            if (reply.output != null)
+                for (TagDescriptor element : reply.output)
                     response.addOutData(element.tag_id);
-            if(++all_done == 2) //2, the number of pending exec streams
+            if (++all_done == 2) //2, the number of pending exec streams
             {
-                final_dest.tell(response.build(),ActorRef.noSender());
+                final_dest.tell(response.build(), ActorRef.noSender());
                 getContext().stop(getSelf());
             }
             return;
         }
 
-        if(message instanceof DeleteReply)
-        {
-            DbmsQuery.async_reuse_fsm(getSender(),new QueryGenericArgument( getSelf(),
-                                                                            "SELECT RELEASE_LOCK(123);",
-                                                                            new RequestModes(RequestModes.RequestTypology.READ_WRITE,
-                                                                                             RequestModes.RequestBehaviour.RESOURCE_RELEASER),
-                                                                            false, //don't commit
-                                                                            ReleaseReply.class
-                                                                           )
-                                      );
+        if (message instanceof DeleteReply) {
+            DbmsQuery.async_reuse_fsm(getSender(), new QueryGenericArgument(getSelf(),
+                    "SELECT RELEASE_LOCK(123);",
+                    new RequestModes(RequestModes.RequestTypology.READ_WRITE,
+                            RequestModes.RequestBehaviour.RESOURCE_RELEASER),
+                    false, //don't commit
+                    ReleaseReply.class
+            )
+            );
             return;
         }
 
-        if(message instanceof ReleaseReply)
-        {
+        if (message instanceof ReleaseReply) {
             /* since we have not committed yet, we can force it talking directly to the Dbmslayer if we want */
-            fetch_data.tell(new DbmsWorkerCmdRequest(DbmsWorkerCmdRequest.Command.COMMIT),getSelf());
+            fetch_data.tell(new DbmsWorkerCmdRequest(DbmsWorkerCmdRequest.Command.COMMIT), getSelf());
             return;
         }
 
-        if(message instanceof DbmsWorkerCmdReply)
-        {
+        if (message instanceof DbmsWorkerCmdReply) {
             DbmsWorkerCmdReply reply = (DbmsWorkerCmdReply) message;
             if (reply.originalRequest == DbmsWorkerCmdRequest.Command.COMMIT) // fine, commit done!
             {
-                if(++all_done == 2)
-                {
-                    final_dest.tell(response.build(),ActorRef.noSender());
+                if (++all_done == 2) {
+                    final_dest.tell(response.build(), ActorRef.noSender());
                     getContext().stop(getSelf());
                 }
                 return;
@@ -140,13 +116,12 @@ public class SimpleTestWorker extends UntypedActor {
         /* unhandled */
         response.setReturnCode(-1);
 
-        if(message instanceof DbmsException)
-        {
+        if (message instanceof DbmsException) {
             DbmsException error = (DbmsException) message;
             /* here we can intercept every error coming from dbmslayer */
             response.clear().setReturnCode(error.getErrorCode()).setReturnMsg(error.getMessage());
         }
-        final_dest.tell(response.build(),ActorRef.noSender());
+        final_dest.tell(response.build(), ActorRef.noSender());
         getContext().stop(getSelf());
     }
 }

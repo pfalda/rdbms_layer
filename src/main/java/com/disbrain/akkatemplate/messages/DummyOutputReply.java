@@ -1,7 +1,5 @@
 package com.disbrain.akkatemplate.messages;
 
-import java.util.ArrayList;
-
 /**
  * Created with IntelliJ IDEA.
  * User: angel
@@ -12,9 +10,9 @@ import java.util.ArrayList;
 public class DummyOutputReply {
     public static final int out_columns_num = 1;
     public static final int out_lines_num = Integer.MAX_VALUE;
-    public Object[]    output;
-    public DummyOutputReply(Object[] values)
-    {
+    public final Object[] output;
+
+    public DummyOutputReply(Object[] values) {
         output = values;
     }
 }

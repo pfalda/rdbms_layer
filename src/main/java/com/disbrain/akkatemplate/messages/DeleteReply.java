@@ -10,8 +10,7 @@ package com.disbrain.akkatemplate.messages;
 public class DeleteReply {
     public final static int out_columns_num = 2;
 
-    public DeleteReply(Object[] values)
-    {
+    public DeleteReply(Object[] values) {
 
     }
 }
