@@ -13,7 +13,7 @@ import java.sql.SQLException;
 
 public class AsyncTasksBroker extends UntypedActor {
 
-    /* AN ASYNCER RELEASER CAN  -NEVER- BLOCK /
+    /* AN ASYNCER RELEASER CAN  -NEVER- BLOCK */
     /* AN ASYNCER GETTER IS ALMOST ALWAYS BLOCKED */
 
     @Override

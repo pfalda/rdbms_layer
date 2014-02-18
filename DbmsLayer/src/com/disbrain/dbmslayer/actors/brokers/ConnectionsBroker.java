@@ -62,7 +62,7 @@ public class ConnectionsBroker extends UntypedActor {
                         return;
                     }
                 } catch (SQLException exc) {
-                    System.err.println("ERROR CHECKING CONNECTION STATUS, TRYING TO KEEP GOING: " + exc);
+                    log.error(exc,"ERROR CHECKING CONNECTION STATUS, TRYING TO KEEP GOING");
                 }
                 try {
                     if (close_this.getAutoCommit() == false)

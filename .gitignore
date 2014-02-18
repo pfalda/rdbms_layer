@@ -1,0 +1,11 @@
+*/project/boot
+*/project/build/target
+*/project/project.target.config-classes
+*-shim.sbt
+*.iml
+.DS_Store
+.cache
+.classpath
+.project
+.settings
+target

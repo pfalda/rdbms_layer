@@ -191,9 +191,10 @@ public class GenericDBMSQueryingActor extends UntypedActor {
                         }
 
                     }
+                    else
+                        result_list.add(dbms_result.ddl_retval);
 
                     output_obj = rep_type.getConstructor(Object[].class).newInstance(new Object[]{result_list.toArray()});
-
 
                 } catch (SQLException ex) {
                     if (has_result == false)

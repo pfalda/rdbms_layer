@@ -2,7 +2,7 @@ package com.disbrain.dbmslayer.exceptions;
 
 
 @SuppressWarnings("serial")
-public class DbmsRemoteDbError extends RuntimeException implements DbmsException {
+public class DbmsRemoteDbError extends DbmsException {
     StackTraceElement trace[] = Thread.currentThread().getStackTrace();
     private Exception error;
     private final static int code = 1;
@@ -11,40 +11,23 @@ public class DbmsRemoteDbError extends RuntimeException implements DbmsException
     private String real_message = null;
 
     public DbmsRemoteDbError() {
-        error = null;
+        super();
     }
 
     public DbmsRemoteDbError(Exception ex) {
-        trace = Thread.currentThread().getStackTrace();
-        error = ex;
+        super(ex);
     }
 
     public DbmsRemoteDbError(Exception ex, String extra_msg) {
-        error = ex;
-        extraInfo = extra_msg;
+        super(ex,extra_msg);
     }
 
     public DbmsRemoteDbError(String extra_info) {
-        error = null;
-        extraInfo = extra_info;
-    }
-
-    public void setException(Exception ex) {
-        error = ex;
+        super(extra_info);
     }
 
     public String getMessage() {
-        if (error != null)
-            extraInfo += String.format("\nClass: %s\nCause: %s\nMessage: %s\nStack Trace:\n", error.getClass(), error.getCause(), error.getMessage());
-        for (StackTraceElement element : trace)
-            extraInfo += element.toString() + "\n";
-        return description + extraInfo;
-    }
-
-    public String getRealMessage() {
-        if (error != null)
-            real_message = error.getMessage();
-        return real_message;
+        return description + super.getVerboseMessage();
     }
 
     public int getErrorCode() {

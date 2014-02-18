@@ -223,7 +223,6 @@ public class DBMSWorker extends UntypedActor {
 
         } catch (SQLException ex) {
             DbmsException error = null;
-
             switch (fsm_stage) {
                 case 1:
                 case 4:

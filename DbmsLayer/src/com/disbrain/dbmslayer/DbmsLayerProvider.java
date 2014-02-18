@@ -10,6 +10,9 @@ import com.disbrain.dbmslayer.actors.brokers.DeadLetterBroker;
 import com.disbrain.dbmslayer.net.DbmsConnectionPool;
 import com.typesafe.config.Config;
 
+import java.beans.PropertyVetoException;
+import java.sql.SQLException;
+
 
 //PN: why symlink from src/test/java/com to src/main/java/com ?
 //PF: to reuse the same source for compilation
@@ -26,40 +29,35 @@ public class DbmsLayerProvider implements Extension {
     private final ActorRef dbms_queries_broker;
     private final LoggingAdapter dbmslayer_log;
 
-    public enum DeathPolicy {SUICIDE, SURVIVE}
+    public enum DeathPolicy {SUICIDE, SURVIVE};
 
-    ;
-
-    private DbmsConnectionPool create_configured_pool(LoggingAdapter logger, Config config) {
+    private DbmsConnectionPool create_configured_pool(LoggingAdapter logger, Config config) throws SQLException, PropertyVetoException, ClassNotFoundException {
         DbmsConnectionPool pool = null;
-        try {
-            Config user_cfg = config.getConfig("DbmsLayer.akka.connection-pool");
-            pool = new DbmsConnectionPool(logger, user_cfg.getString("pool"), user_cfg.getString("driver"));
+        Config user_cfg = config.getConfig("DbmsLayer.akka.connection-pool");
+        pool = new DbmsConnectionPool(logger, user_cfg.getString("pool"), user_cfg.getString("driver"));
+        if (user_cfg.getBoolean("shall-init-pool") == true)
+        {
             pool = pool.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s", user_cfg.getString("mysqldb.host"),
-                    user_cfg.getInt("mysqldb.port"), user_cfg.getString("mysqldb.dbname")))
-                    .setUsername(user_cfg.getString("mysqldb.username")).setPassword(user_cfg.getString("mysqldb.pwd"))
-                    .setStatementsCacheSize(user_cfg.getInt("stmt-cachesize")).setDefaultAutoCommit(user_cfg.getBoolean("autocommit"))
-                    .setDefaultTransactionIsolation(user_cfg.getString("trans-isolation-level"))
-                    .setMinConnectionsPerPartition(user_cfg.getInt("min-partition-connections"))
-                    .setMaxConnectionsPerPartition(user_cfg.getInt("max-partition-connections"))
-                    .setAcquireIncrement(user_cfg.getInt("connections-acquire-increment"))
-                    .setPartitionCount(user_cfg.getInt("partitions-count"))
-                    .setIdleConnectionTestPeriodInSeconds(user_cfg.getInt("idle-test-period"))
-                    .setStatisticsEnabled(user_cfg.getBoolean("statistics"))
-                    .setPoolAvailabilityThreshold(user_cfg.getInt("pool-availability-threshold"))
-                    .setDisableConnectionTracking(user_cfg.getBoolean("disable-connection-tracking"))
-                    .setCloseConnectionWatch(user_cfg.getBoolean("close-connection-watch"))
-                    .setMaxConnectionAgeInSeconds(user_cfg.getInt("max-connection-age"))
-                    .createPool();
-        } catch (Exception exc) {
-            dbmslayer_log.error(exc, "Unable to init DbmsLayer, returning dummy pool");
-            pool = new DbmsConnectionPool(system);
+                user_cfg.getInt("mysqldb.port"), user_cfg.getString("mysqldb.dbname")))
+                .setUsername(user_cfg.getString("mysqldb.username")).setPassword(user_cfg.getString("mysqldb.pwd"))
+                .setStatementsCacheSize(user_cfg.getInt("stmt-cachesize")).setDefaultAutoCommit(user_cfg.getBoolean("autocommit"))
+                .setDefaultTransactionIsolation(user_cfg.getString("trans-isolation-level"))
+                .setMinConnectionsPerPartition(user_cfg.getInt("min-partition-connections"))
+                .setMaxConnectionsPerPartition(user_cfg.getInt("max-partition-connections"))
+                .setAcquireIncrement(user_cfg.getInt("connections-acquire-increment"))
+                .setPartitionCount(user_cfg.getInt("partitions-count"))
+                .setIdleConnectionTestPeriodInSeconds(user_cfg.getInt("idle-test-period"))
+                .setStatisticsEnabled(user_cfg.getBoolean("statistics"))
+                .setPoolAvailabilityThreshold(user_cfg.getInt("pool-availability-threshold"))
+                .setDisableConnectionTracking(user_cfg.getBoolean("disable-connection-tracking"))
+                .setCloseConnectionWatch(user_cfg.getBoolean("close-connection-watch"))
+                .setMaxConnectionAgeInSeconds(user_cfg.getInt("max-connection-age"))
+                .createPool();
         }
-
         return pool;
     }
 
-    public DbmsLayerProvider(ActorSystem fatherAS) {
+    public DbmsLayerProvider(ActorSystem fatherAS) throws PropertyVetoException, SQLException, ClassNotFoundException {
 
         system = fatherAS;
         dbmslayer_log = Logging.getLogger(system, this);
