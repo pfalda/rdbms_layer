@@ -6,6 +6,11 @@ public class DbmsConnectionPoolError extends DbmsException {
     private final static int code = 6;
     private final static String description = "Error while requesting a new connection from the pool";
 
+    public DbmsConnectionPoolError()
+    {
+        super();
+    }
+
     public DbmsConnectionPoolError(Exception ex) {
         super(ex);
     }

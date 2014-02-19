@@ -9,7 +9,7 @@ public class DbmsLayerError extends DbmsException {
     private final static String description = "The following error has occurred executing an api call: ";
 
     public DbmsLayerError() {
-        error = null;
+        super();
     }
 
     public DbmsLayerError(Exception ex) {

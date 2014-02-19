@@ -14,9 +14,6 @@ import java.beans.PropertyVetoException;
 import java.sql.SQLException;
 
 
-//PN: why symlink from src/test/java/com to src/main/java/com ?
-//PF: to reuse the same source for compilation
-
 public class DbmsLayerProvider implements Extension {
 
     private final ActorSystem system;

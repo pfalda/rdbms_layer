@@ -7,6 +7,7 @@ public abstract class DbmsException extends RuntimeException {
     protected Exception error = null;
     protected String extraInfo = "";
     protected String real_message = null;
+    private   int    code = -1;
 
     protected DbmsException()
     {
@@ -42,5 +43,10 @@ public abstract class DbmsException extends RuntimeException {
         if (error != null)
             real_message = error.getMessage();
         return real_message;
+    }
+
+    public int getErrorCode()
+    {
+        return code;
     }
 }

@@ -29,6 +29,18 @@ public class DeadLetterBroker extends UntypedActor {
         do {
 
 
+            //PN: Is connection closing relying on this?
+            //    Will there be a resource leak if messages are lost?
+            //    It is not guaranteed that all messages targeted for a stopping/stopped actor will be delivered to deadLetters.
+            //    During termination messages can go nowhere (replacement of mailbox replacement cannot be done without a certain race condition).
+            //
+            //PF: When a hierarchy is shut down the connection releasing is triggered by the DBMSWorker postStop() hook (DBMSWorker.java:275)
+            //    If, for whichever reason, the DBMSWorker actor who is in charge for the connection is killed before the connection setup,
+            //    (that happens through the receive of the ConnectionReply message (DBMSWorker.java:74)), this dead letter handler is supposed to intercept
+            //    the ConnectionReply message sent by the Connection Broker towards the dead DBMSWorker and to close the no-more-required connection.
+            //    If a DBMSWorker is prematurely killed AND the message sent by the broker is lost due to the race condition, then there is a resource
+            //    leakage of one connection. (And if the connection pool doesn't close it due to unuse timeout)
+
             if (message instanceof DeadLetter) {
                 DeadLetter dead_msg = (DeadLetter) message;
                 Object real_msg;
